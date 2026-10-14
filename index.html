@@ -27,10 +27,10 @@ textarea{height:96px;resize:none}input{margin-bottom:8px}
 <h1>🐶 단골 등록 권유 멘트 RP <small style="font-size:13px;color:#6b6580;font-weight:400">(POP 활용하여 안내하기)</small></h1>
 <div class="tabs" id="tabs"></div>
 <div class="card"><div class="goal" id="goal"></div><div class="sit" id="sit"></div><div id="chat"></div></div>
-<div class="card" id="inp"><input id="nm" placeholder="이름 (결과 이미지·복사에 포함)"><textarea id="ta" placeholder="고객에게 건넬 멘트를 입력해 보세요"></textarea>
+<div class="card" id="inp"><input id="nm" lang="ko" placeholder="이름 (결과 이미지·복사에 포함)"><textarea id="ta" lang="ko" placeholder="고객에게 건넬 멘트를 입력해 보세요"></textarea>
 <button class="btn" id="go">멘트 전달하기</button><div class="hint">💡 고객이 얻는 도움 + “저희 매장 단골” 제안 + 구체적인 혜택</div></div>
-<div class="card" id="st2" hidden><div class="goal">2단계 · QR코드 안내</div><div class="sit">고객이 “알겠어요”라고 했어요. QR코드를 스캔해서 단골 등록하도록 안내해 보세요.</div>
-<textarea id="ta2" placeholder="QR코드 스캔으로 등록하도록 안내하는 멘트를 입력해 보세요"></textarea>
+<div class="card" id="st2" hidden><div class="goal" id="st2g">2단계 · QR코드 안내</div><div class="sit" id="st2s"></div>
+<textarea id="ta2" lang="ko" placeholder="QR코드 스캔으로 등록하도록 안내하는 멘트를 입력해 보세요"></textarea>
 <button class="btn" id="go2">안내 멘트 전달하기</button><button class="btn g" id="sk">건너뛰고 결과 보기</button></div>
 <div class="card" id="fb" hidden>
 <div id="rep"></div>
@@ -88,6 +88,13 @@ const Q={c:[["QR코드 안내",/QR|큐알|큐아르/i,"어디서 등록하는지
 ["단골 등록 목적 안내",/등록|가입|단골/,"무엇을 위한 스캔인지 알려 주세요. 예) “스캔해서 단골 등록을 해주세요.”","단골 등록을 위한 스캔이라는 목적을 말했어요."],
 ["친절한 도움 표현",/도와|함께|옆|알려|안내|감사/,"어려워하면 돕겠다는 말을 덧붙여 보세요. 예) “어려우시면 제가 옆에서 도와드릴게요.”","어려워할 고객을 배려해 도움을 제안했어요."]],
 m:"감사합니다! 여기 POP에 있는 QR코드를 휴대폰 카메라로 스캔해서 단골 등록을 해주세요. 어려우시면 제가 옆에서 도와드릴게요."};
+Q.t="QR코드 안내";Q.sit="고객이 “알겠어요”라고 했어요. QR코드를 스캔해서 단골 등록하도록 안내해 보세요.";Q.ph="QR코드 스캔으로 등록하도록 안내하는 멘트를 입력해 보세요";Q.cu="네, 알겠어요. 어떻게 하면 되나요?";
+const QF={t:"QR코드 공유 안내",sit:"가족분들은 함께 오지 않았어요. 고객님께 QR코드를 가족분들께 공유해서 단골 등록하도록 안내해 보세요.",ph:"가족분들께 QR코드를 공유해 등록하도록 안내하는 멘트를 입력해 보세요",cu:"좋아요, 가족들한테 전해볼게요. 어떻게 하면 되나요?",
+c:[["QR코드 공유 안내",/QR|큐알|큐아르/i,"가족에게 보낼 대상을 분명히 해 주세요. 예) “이 QR코드를 가족분들께 공유해 주세요.”","QR코드를 가족에게 공유하도록 분명히 안내했어요."],
+["공유 방법 안내",/공유|보내|전달|캡처|저장|링크|카톡|메시지|문자/,"어떻게 보내면 되는지 알려 주세요. 예) “카톡으로 보내시면 돼요.”","가족에게 보내는 방법을 알려줘 바로 실행할 수 있어요."],
+["가족의 단골 등록 목적 안내",/등록|가입|단골/,"가족분들이 무엇을 하게 되는지 알려 주세요. 예) “가족분들도 스캔하시면 바로 단골 등록이 돼요.”","가족도 스캔하면 단골 등록이 된다는 목적을 말했어요."],
+["친절한 도움·혜택 표현",/도와|알려|안내|감사|선물|충전기|혜택/,"어려워하면 돕겠다는 말이나 혜택을 덧붙여 보세요. 예) “어려우시면 저희가 도와드릴게요.”","도움 제안이나 혜택으로 가족 등록을 쉽게 만들었어요."]],
+m:"그럼 이 QR코드를 가족분들께 카톡으로 공유해 주세요. 가족분들이 휴대폰 카메라로 스캔하면 바로 단골 등록이 되고, 등록하시면 고속 충전기 선물도 받으실 수 있어요. 어려우시면 저희가 도와드릴게요."};
 function sect(title,d,v,m,two){const g=d.rs.filter(x=>x.ok),n=d.rs.filter(x=>!x.ok);
 return (two?'<h4 style="font-size:15px;color:#6c4ce0;margin-top:18px">'+title+' · '+d.p+'점</h4>':'')+'<div class="note">'+esc(d.sum)+'</div>'+
 '<h4>내 멘트</h4><div class="mine">'+esc(v)+'</div>'+
@@ -95,8 +102,8 @@ return (two?'<h4 style="font-size:15px;color:#6c4ce0;margin-top:18px">'+title+' 
 '<h4>🔧 보완할 점</h4><ul>'+(n.length?n.map(x=>'<li><b>'+esc(x.l)+'</b><br>'+esc(x.tip)+'</li>').join(""):'<li>모든 요소를 충족했어요!</li>')+'</ul>'+
 '<h4>📝 모범 예시 (참고용)</h4><div class="mod">“'+esc(m)+'”</div>'}
 function report(){const L=last,two=!!L.d2;
-const h=two?'<div class="sc">종합 '+Math.round(L.d.p*0.7+L.d2.p*0.3)+'점 <small>(권유 '+L.d.p+'점 70% · QR 안내 '+L.d2.p+'점 30%)</small></div>':'<div class="sc">'+L.d.p+'점 <small>('+L.d.k+'/'+L.d.rs.length+')</small></div>';
-return h+sect("1단계 · 권유 멘트",L.d,L.v,L.s.m,two)+(two?sect("2단계 · QR코드 안내",L.d2,L.v2,Q.m,two):'')+'<div class="note" style="color:#6b6580;margin-top:10px">워크시트 예시는 참고용이에요. 표현이 달라도 취지가 맞으면 좋은 멘트예요.</div><div id="aib"></div>'}
+const h=two?'<div class="sc">종합 '+Math.round(L.d.p*0.7+L.d2.p*0.3)+'점 <small>(권유 '+L.d.p+'점 70% · '+L.q.t+' '+L.d2.p+'점 30%)</small></div>':'<div class="sc">'+L.d.p+'점 <small>('+L.d.k+'/'+L.d.rs.length+')</small></div>';
+return h+sect("1단계 · 권유 멘트",L.d,L.v,L.s.m,two)+(two?sect("2단계 · "+L.q.t,L.d2,L.v2,L.q.m,two):'')+'<div class="note" style="color:#6b6580;margin-top:10px">워크시트 예시는 참고용이에요. 표현이 달라도 취지가 맞으면 좋은 멘트예요.</div><div id="aib"></div>'}
 function textOf(){const L=last,nm=$("nm").value.trim()||"(이름 미입력)";
 let t="이름: "+nm+"\n["+L.s.t+"] "+L.d.p+"점\n내 멘트: "+L.v+"\n\n"+L.d.sum+"\n";
 t+="\n✅ 잘한 점\n"+(L.d.rs.filter(x=>x.ok).map(x=>"- "+x.good).join("\n")||"- (없음)");
@@ -113,16 +120,16 @@ c.innerHTML='<div style="font-weight:800;font-size:16px;color:#6c4ce0">🐶 단�
 document.body.appendChild(c);const cv=await html2canvas(c,{scale:2,backgroundColor:"#ffffff"});c.remove();
 const bl=await new Promise(r=>cv.toBlob(r,"image/png"));return {bl,url:cv.toDataURL("image/png")}}
 async function copy(t,o,msg){try{await navigator.clipboard.writeText(t);o.textContent=msg}catch(e){o.innerHTML="";const a=document.createElement("textarea");a.value=t;a.readOnly=true;a.style.marginTop="8px";o.appendChild(document.createTextNode("아래 글을 길게 눌러 복사해 주세요."));o.appendChild(a);a.focus();a.select()}}
-const askRe=/(단골|등록)[^?？]*(까요|실래요|\?|？)/;
+const askRe=/단골|등록/;
 async function showResult(){const L=last;$("inp").hidden=true;$("st2").hidden=true;$("fb").hidden=false;$("rep").innerHTML=report();$("imo").innerHTML="";
 $("fb").scrollIntoView({behavior:"smooth"});
 if(AI_URL){$("aib").innerHTML='<div class="note">🤖 Claude가 평가하는 중…</div>';
 try{const a=await judge(L.s,L.v);L.ai=a;$("aib").innerHTML='<h4>🤖 Claude 피드백 (1단계 · '+esc(a.score)+'점)</h4><div class="note">'+esc(a.feedback)+'</div><ul>'+(a.specific||[]).map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul><h4>✨ 개선 예시</h4><div class="mod">“'+esc(a.improved)+'”</div>'}catch(e){$("aib").innerHTML=""}}
 pre=makeImg().catch(()=>null)}
-$("go").onclick=()=>{const v=$("ta").value.trim();if(!v)return;const s=S[cur],d=evaluate(s,v);last={s,v,d};bub("me",v);
-if(askRe.test(v)){bub("cu","네, 알겠어요. 어떻게 하면 되나요?");$("inp").hidden=true;$("st2").hidden=false;$("ta2").focus();return}
+$("go").onclick=()=>{const v=$("ta").value.trim();if(!v)return;const s=S[cur],d=evaluate(s,v);last={s,v,d,q:cur===3?QF:Q};bub("me",v);
+if(askRe.test(v)){const q=last.q;bub("cu",q.cu);$("inp").hidden=true;$("st2g").textContent="2단계 · "+q.t;$("st2s").textContent=q.sit;$("ta2").placeholder=q.ph;$("st2").hidden=false;if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();$("st2").scrollIntoView({behavior:"smooth",block:"start"});return}
 bub("cu",pick(d.p>=80?R.hi:d.p>=50?R.mid:R.lo));showResult()};
-$("go2").onclick=()=>{const v2=$("ta2").value.trim();if(!v2)return;const d2=evaluate(Q,v2,20);last.v2=v2;last.d2=d2;bub("me",v2);showResult()};
+$("go2").onclick=()=>{const v2=$("ta2").value.trim();if(!v2)return;const d2=evaluate(last.q,v2,20);last.v2=v2;last.d2=d2;bub("me",v2);showResult()};
 $("sk").onclick=()=>{last.d2=null;showResult()};
 $("im").onclick=async()=>{const o=$("imo");o.textContent="준비 중…";const r=await pre;
 if(!r){o.textContent="이미지 생성에 실패했어요. 휴대폰 화면 캡처를 이용해 주세요.";return}
