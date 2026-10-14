@@ -20,6 +20,7 @@ textarea{height:96px;resize:none}input{margin-bottom:8px}
 #rep h4{margin:14px 0 4px;font-size:14px}#rep ul{margin:0;padding-left:18px;font-size:14px}#rep li{margin:4px 0}
 .sc{font-size:26px;font-weight:800}.sc small{font-size:13px;color:#6b6580;font-weight:400}
 .mine,.mod{font-size:14px;background:#f6f0fb;border-radius:10px;padding:10px;margin-top:6px;white-space:pre-wrap}
+.ri{border-top:1px solid #e3d9f3;padding:10px 0}
 .mod{border-left:3px solid #6c4ce0}.note{font-size:13px;margin-top:6px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -34,9 +35,13 @@ textarea{height:96px;resize:none}input{margin-bottom:8px}
 <button class="btn" id="go2">안내 멘트 전달하기</button><button class="btn g" id="sk">건너뛰고 결과 보기</button></div>
 <div class="card" id="fb" hidden>
 <div id="rep"></div>
-<button class="btn" id="im">📤 피드백 이미지로 공유</button><div id="imo" class="note"></div>
+<button class="btn" id="im">💾 피드백 이미지 저장</button><div id="imo" class="note"></div>
+<button class="btn g" id="all">📊 전체 결과 보기</button>
 <div class="row"><button class="btn g" id="re">다시 하기</button><button class="btn" id="nx">다음 유형 ▶</button></div>
-</div></div>
+</div>
+<div class="card" id="allv" hidden><div id="allrep"></div>
+<button class="btn" id="im2">📤 전체 결과 이미지 공유</button><div id="imo2" class="note"></div>
+<button class="btn g" id="rs">🗑️ 결과 모두 지우고 처음부터</button></div></div>
 <script>
 // AI 평가 서버(Cloudflare Worker) 주소가 있으면 아래에 붙여넣으세요. 비워두면 규칙 기반 피드백만 나옵니다.
 const AI_URL="";
@@ -72,11 +77,16 @@ const R={hi:["아, 그런 게 있군요. 그럼 등록해 주세요!","좋네요
 mid:["음… 등록하면 연락 많이 오는 건 아니죠? 조금 고민되네요.","굳이 등록해야 하나요? 어떤 점이 좋은지 한 번만 더 알려주세요."],
 lo:["아뇨, 괜찮아요. 다음에 올게요.","그냥 필요하면 그때 올게요."]};
 const pick=a=>a[Math.floor(Math.random()*a.length)];
-let cur=0,last=null,pre=null;
+let cur=0,last=null,pre=null,pre2=null,results={};
+const KEY="dangol_rp_results_v1";
+try{results=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){results={}}
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(results))}catch(e){}};
 function bub(c,t){const d=document.createElement("div");d.className="b "+c;d.textContent=t;$("chat").appendChild(d)}
+function tabs(){$("tabs").innerHTML="";S.forEach((x,k)=>{const b=document.createElement("button");b.className="tab"+(k==cur&&$("allv").hidden?" on":"");b.textContent=(results[k]?"✅ ":"")+x.t;b.onclick=()=>load(k);$("tabs").appendChild(b)});
+const a=document.createElement("button");a.className="tab"+($("allv").hidden?"":" on");a.textContent="📊 전체 결과 "+Object.keys(results).length+"/"+S.length;a.onclick=showAll;$("tabs").appendChild(a)}
 function load(i){cur=i;const s=S[i];$("goal").textContent=s.goal;$("sit").textContent=s.sit;$("chat").innerHTML="";
 $("ta").value="";$("ta2").value="";$("inp").hidden=false;$("st2").hidden=true;$("fb").hidden=true;pre=null;
-$("tabs").innerHTML="";S.forEach((x,k)=>{const b=document.createElement("button");b.className="tab"+(k==i?" on":"");b.textContent=x.t;b.onclick=()=>load(k);$("tabs").appendChild(b)})}
+$("allv").hidden=true;tabs()}
 function evaluate(s,v,mn){const n=v.replace(/\s/g,"").length;
 const rs=s.c.map(([l,r,tip,good])=>({l,ok:r.test(v),tip,good}));
 rs.push({l:"충분히 구체적인 멘트",ok:n>=(mn||30),tip:"고객이 얻는 이익을 풀어서 말해 보세요. (현재 "+n+"자, "+(mn||30)+"자 이상 권장)",good:"고객이 이해할 만큼 충분히 구체적으로 말했어요."});
@@ -114,14 +124,25 @@ function base(s,v){return "당신은 통신 매장 판매 교육 강사입니다
 const ask=(s,v)=>base(s,v)+"다음 형식으로 한국어로 답해 주세요: 1) 점수(100점 만점) 2) 잘한 점(멘트의 구체적인 표현을 인용) 3) 아쉬운 점(어떤 표현을 어떻게 바꾸면 좋은지) 4) 더 나은 멘트 예시 1개";
 async function judge(s,v){const r=await fetch(AI_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:base(s,v)+'JSON만 출력하세요(설명·코드블록 금지): {"score":0~100 정수,"feedback":"총평 2~3문장","specific":["멘트의 구체적 표현을 인용한 지적 3~4개"],"improved":"더 나은 멘트 1개"}'})});
 if(!r.ok)throw 0;const j=await r.json();if(typeof j.score!=="number")throw 0;return j}
-async function makeImg(){const c=document.createElement("div");
+async function makeImgOf(sub,html){const c=document.createElement("div");
 c.style.cssText="position:absolute;left:-9999px;top:0;width:380px;padding:16px;background:#fff;color:#25203a;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-size:14px;line-height:1.5";
-c.innerHTML='<div style="font-weight:800;font-size:16px;color:#6c4ce0">🐶 단골 등록 권유 멘트 RP</div><div style="font-weight:700;margin:4px 0 8px">'+esc($("nm").value.trim()||"(이름 미입력)")+' · '+esc(last.s.t)+'</div><div id="rep">'+$("rep").innerHTML+'</div>';
+c.innerHTML='<div style="font-weight:800;font-size:16px;color:#6c4ce0">🐶 단골 등록 권유 멘트 RP</div><div style="font-weight:700;margin:4px 0 8px">'+esc($("nm").value.trim()||"(이름 미입력)")+' · '+esc(sub)+'</div><div id="rep">'+html+'</div>';
 document.body.appendChild(c);const cv=await html2canvas(c,{scale:2,backgroundColor:"#ffffff"});c.remove();
 const bl=await new Promise(r=>cv.toBlob(r,"image/png"));return {bl,url:cv.toDataURL("image/png")}}
+const makeImg=()=>makeImgOf(last.s.t,$("rep").innerHTML);
 async function copy(t,o,msg){try{await navigator.clipboard.writeText(t);o.textContent=msg}catch(e){o.innerHTML="";const a=document.createElement("textarea");a.value=t;a.readOnly=true;a.style.marginTop="8px";o.appendChild(document.createTextNode("아래 글을 길게 눌러 복사해 주세요."));o.appendChild(a);a.focus();a.select()}}
+function allHTML(){let sum=0,cnt=0;
+const rows=S.map((s,i)=>{const R=results[i];if(!R)return '<div class="ri"><b>'+esc(s.t)+'</b> <span style="color:#6b6580">· 아직 안 했어요</span></div>';
+const sc=R.d2?Math.round(R.d.p*0.7+R.d2.p*0.3):R.d.p;sum+=sc;cnt++;
+const miss=R.d.rs.filter(x=>!x.ok).map(x=>x.l).concat(R.d2?R.d2.rs.filter(x=>!x.ok).map(x=>x.l):[]);
+return '<div class="ri"><b>'+esc(s.t)+' · '+sc+'점</b> <small style="color:#6b6580">('+(R.d2?'권유 '+R.d.p+'점 70% · '+esc(R.qt)+' '+R.d2.p+'점 30%':'권유 '+R.d.p+'점')+')</small>'+
+'<div class="mine">'+esc(R.v)+(R.d2?'\n'+esc(R.v2):'')+'</div>'+
+'<div class="note">'+(miss.length?'🔧 보완할 점: '+esc(miss.join(', ')):'✅ 모든 항목을 충족했어요!')+'</div></div>'}).join("");
+return '<div class="sc">평균 '+(cnt?Math.round(sum/cnt):0)+'점 <small>('+cnt+'/'+S.length+' 완료)</small></div><div class="note" style="color:#6b6580">각 유형 점수(1단계 70% + 2단계 30%)의 평균이에요.</div>'+rows}
+function showAll(){["inp","st2","fb"].forEach(i=>$(i).hidden=true);$("allv").hidden=false;$("allrep").innerHTML=allHTML();$("imo2").innerHTML="";tabs();
+pre2=makeImgOf("전체 결과",$("allrep").innerHTML).catch(()=>null);$("allv").scrollIntoView({behavior:"smooth"})}
 const askRe=/단골|등록/;
-async function showResult(){const L=last;$("inp").hidden=true;$("st2").hidden=true;$("fb").hidden=false;$("rep").innerHTML=report();$("imo").innerHTML="";
+async function showResult(){const L=last;results[cur]={v:L.v,d:L.d,v2:L.v2||null,d2:L.d2||null,qt:L.q.t};persist();tabs();$("inp").hidden=true;$("st2").hidden=true;$("fb").hidden=false;$("rep").innerHTML=report();$("imo").innerHTML="";
 $("fb").scrollIntoView({behavior:"smooth"});
 if(AI_URL){$("aib").innerHTML='<div class="note">🤖 Claude가 평가하는 중…</div>';
 try{const a=await judge(L.s,L.v);L.ai=a;$("aib").innerHTML='<h4>🤖 Claude 피드백 (1단계 · '+esc(a.score)+'점)</h4><div class="note">'+esc(a.feedback)+'</div><ul>'+(a.specific||[]).map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul><h4>✨ 개선 예시</h4><div class="mod">“'+esc(a.improved)+'”</div>'}catch(e){$("aib").innerHTML=""}}
@@ -131,12 +152,23 @@ if(askRe.test(v)){const q=last.q;bub("cu",q.cu);$("inp").hidden=true;$("st2g").t
 bub("cu",pick(d.p>=80?R.hi:d.p>=50?R.mid:R.lo));showResult()};
 $("go2").onclick=()=>{const v2=$("ta2").value.trim();if(!v2)return;const d2=evaluate(last.q,v2,20);last.v2=v2;last.d2=d2;bub("me",v2);showResult()};
 $("sk").onclick=()=>{last.d2=null;showResult()};
-$("im").onclick=async()=>{const o=$("imo");o.textContent="준비 중…";const r=await pre;
+async function shareImg(pr,o){o.textContent="준비 중…";const r=await pr;
 if(!r){o.textContent="이미지 생성에 실패했어요. 휴대폰 화면 캡처를 이용해 주세요.";return}
-const f=new File([r.bl],"단골등록RP피드백.png",{type:"image/png"});
-try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"단골 등록 RP 피드백"});o.textContent="";return}}catch(e){if(e&&e.name==="AbortError"){o.textContent="";return}}
+const f=new File([r.bl],"단골등록RP결과.png",{type:"image/png"});
+try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"단골 등록 RP 전체 결과"});o.textContent="";return}}catch(e){if(e&&e.name==="AbortError"){o.textContent="";return}}
 try{await navigator.clipboard.write([new ClipboardItem({"image/png":r.bl})]);o.textContent="✅ 이미지가 복사됐어요. 카톡 등 입력창에 붙여넣기 해 주세요.";return}catch(e){}
-o.innerHTML="";const i=document.createElement("img");i.src=r.url;i.style.cssText="width:100%;margin-top:8px;border-radius:10px;border:1px solid #e3d9f3";o.appendChild(i);o.appendChild(document.createTextNode("이미지를 길게 눌러 저장하거나 공유해 주세요."))};
+o.innerHTML="";const i=document.createElement("img");i.src=r.url;i.style.cssText="width:100%;margin-top:8px;border-radius:10px;border:1px solid #e3d9f3";o.appendChild(i);o.appendChild(document.createTextNode("이 환경에서는 바로 공유가 막혀 있어요. 이미지를 길게 눌러 저장·공유해 주세요."))}
+async function saveImg(pr,o){o.textContent="준비 중…";const r=await pr;
+if(!r){o.textContent="이미지 생성에 실패했어요. 휴대폰 화면 캡처를 이용해 주세요.";return}
+o.innerHTML="";
+try{const a=document.createElement("a");a.href=URL.createObjectURL(r.bl);a.download="단골등록RP결과.png";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+o.appendChild(document.createTextNode("✅ 이미지 저장을 시작했어요. 다운로드 폴더(또는 사진)를 확인해 주세요. 저장이 안 되면 아래 이미지를 길게 눌러 저장해 주세요."))}
+catch(e){o.appendChild(document.createTextNode("이미지를 길게 눌러 저장해 주세요."))}
+const i=document.createElement("img");i.src=r.url;i.style.cssText="width:100%;margin-top:8px;border-radius:10px;border:1px solid #e3d9f3";o.appendChild(i)}
+$("im").onclick=()=>saveImg(pre,$("imo"));
+$("im2").onclick=()=>shareImg(pre2,$("imo2"));
+$("all").onclick=showAll;
+$("rs").onclick=()=>{if(!confirm("모든 유형의 결과를 지우고 처음부터 시작할까요?"))return;results={};persist();load(0)};
 $("re").onclick=()=>load(cur);$("nx").onclick=()=>load((cur+1)%S.length);
 load(0);
 </script></body></html>
